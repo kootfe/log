@@ -1,4 +1,4 @@
-# KFTLogger Features ☠️
+# KFTLogger Features 
 
 A single-header, single-object, cross-platform C logging library designed to outclass anything from Microsoft or anyone else.  
 Fully open source. Fully chaotic. Fully yours.
