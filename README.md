@@ -43,8 +43,8 @@ Fully open source. Fully chaotic. Fully yours.
 - [ ] Asynchronous logging support
 - [ ] Batch logging (`plog()` … `plogend()`)
 - [ ] Optimized for both interactive (TTY) and non-interactive environments
-- [ ] Lightweight fallback system if file descriptors are unavailable
+- [x] Lightweight fallback system if file descriptors are unavailable
 
 ## 🧰 Utility
-- [ ] Direct logging API: `logf("format", ...)` works instantly with no setup
-- [ ] Easy multi-target setup example:
+- [x] Direct logging API: `logf("format", ...)` works instantly with no setup
+- [ ] Easy multi-target setup
