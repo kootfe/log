@@ -11,18 +11,46 @@ static const char *YELLOW = "\x1b[33m"; //Just to anoy ppl couse its bigger then
 static const char *BLUE = "\033[34m";
 
 
-KFTLogger setup_kft_loger(FILE *file, LoggerModes mode)
+KFTLogger setup_kft_loger(LogFileUnion file, LoggerTypes loggertype, LoggerModes mode, size_t loggerCount)
 {
     KFTLogger loger;
-    loger.logFile = file ? file : stderr;
+    switch (loggertype) {
+        case SingleFileLogger:
+            loger = setup_kft_loger_single_file(file.logFile.file, mode);
+            break;
+        case MultiFileLogger:
+            loger = setup_kft_loger_multi_file(file.logFiles, loggerCount, mode);
+            break;
+    }
+    return loger;
+}
+
+KFTLogger setup_kft_loger_single_file(FILE *file, LoggerModes mode)
+{
+    KFTLogger loger;
+    loger.file.logFile.file = file ? file : stderr;
     loger.mode = mode;
-    loger.isAtty = isatty(fileno(loger.logFile));
+    loger.file.logFile.isatty = isatty(fileno(loger.file.logFile.file));
     loger.isFile = (file != stderr && file != stdout && file != stdin);
     if (!loger.isFile) WARNF(&loger, "Log file is not set, using default stderr.\n");
     SUCF(&loger, "Seted the log system success fully\n");
     return loger;
 }
 
+KFTLogger setup_kft_loger_multi_file(LogFile files[], size_t len, LoggerModes mode)
+{
+    KFTLogger loger;
+    loger.file.logFiles = files;
+    for (size_t i = 0; len; ++i) {
+        loger.file.logFiles[i].file = (files[i].file != NULL ? files[i].file : stderr);
+        loger.file.logFiles[i].isatty = isatty(fileno(loger.file.logFiles[i].file));
+    }
+    loger.mode = mode;
+    SUCF(&loger, "Seted the log system success fully\n");
+    return loger;
+}
+
+/*
 int clean_kft_loger(KFTLogger kftLogger)
 {
     if (kftLogger.isFile) {
@@ -117,3 +145,4 @@ int sucf(int isatty, FILE *logfile, const char *format, const char *file, const 
     if (isatty) fprintf(logfile, "%s", RESET);
     return 0;
 }
+*/

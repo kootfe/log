@@ -2,6 +2,7 @@
 #define LOG_H
 
 #include <stdio.h>
+#include <unistd.h>
 
 typedef enum {
     ON,
@@ -16,11 +17,24 @@ typedef enum {
     SUC,
 } LogLevel;
 
+typedef enum {
+    SingleFileLogger,
+    MultiFileLogger,
+} LoggerTypes;
+
+
+typedef struct LogFile {
+    FILE *file;
+    int isatty;
+} LogFile;
+
 typedef struct KFTLogger {
-    FILE *logFile;
+    LogFile logFile;
+    LogFile *logFiles;
+    size_t multiCount;
     LoggerModes mode;
-    int isAtty;
     int isFile; //owns is too much key press so instead `ownsFile` its `isFile`
+    LoggerTypes type;
 } KFTLogger;
 
 int log(const KFTLogger *loger, const LogLevel level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...);
@@ -34,7 +48,9 @@ int warnf(int isatty, FILE *logfile, const char *format, const char *file, const
 #define SUCF(loger, format, ...) log(loger, SUC, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__);
 int sucf(int isatty, FILE *logfile, const char *format, const char *file, const int line, const char *time, const char *date, va_list args);
 
-KFTLogger setup_kft_loger(FILE *file, LoggerModes mode);
+KFTLogger setup_kft_loger( file, LoggerTypes loggertype, LoggerModes mode, size_t loggerCount);
+KFTLogger setup_kft_loger_single_file(FILE *file, LoggerModes mode);
+KFTLogger setup_kft_loger_multi_file(LogFile files[], size_t len, LoggerModes mode);
 void setup_debug_mode(const LoggerModes mode);
 int clean_kft_loger(KFTLogger kftLogger);
 
