@@ -17,22 +17,35 @@ KFTLogger setup_kft_loger(FILE *file, LoggerModes mode)
     loger.logFile = file ? file : stderr;
     loger.mode = mode;
     loger.isAtty = isatty(fileno(loger.logFile));
-    loger.isFile = (file != stderr && file != stdout && file != stdin);
-    if (!loger.isFile) WARNF(&loger, "Log file is not set, using default stderr.\n");
+    loger.ownsFile = (file != stderr && file != stdout && file != stdin);
+    if (!loger.ownsFile) WARNF(&loger, "Log file is not set, using default stderr.\n");
     SUCF(&loger, "Seted the log system success fully\n");
     return loger;
 }
 
-int clean_kft_loger(KFTLogger kftLogger)
+int clean_kft_loger(KFTLogger *kftLogger)
 {
-    if (kftLogger.isFile) {
-        fclose(kftLogger.logFile);
+    if (kftLogger->ownsFile) {
+        fclose(kftLogger->logFile);
     }
-    kftLogger.logFile = stderr;
+    kftLogger->logFile = stderr;
     return 0;
 }
 
-int klog(const KFTLogger *loger, const LogLevel level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...)
+int _print_log(int isatty, FILE *logfile, const char *format, const char *color, const char *level, const char *file, const int line, 
+        const char *time, const char *date, va_list args)
+{
+    if (isatty)
+        fprintf(logfile, "%s[%s] { %s:%d, - %s %s } ", color, level, file, line, time, date);
+    else
+        fprintf(logfile, "[%s] { %s:%d, - %s %s } ", level, file, line, time, date);
+    vfprintf(logfile, format, args);
+    if (isatty) fprintf(logfile, "%s", RESET);
+    fflush(logfile);
+    return 0;
+}
+
+int _klog(const KFTLogger *loger, const LogLevel level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...)
 {
     va_list args;
     va_start(args, date);
@@ -41,7 +54,7 @@ int klog(const KFTLogger *loger, const LogLevel level, const char *format, const
     int isatty;
     if (!loger) {
         logfile = stderr;
-        mode = OFF;
+        mode = ON;
         isatty = 1;
     } else {
         logfile = loger->logFile;
@@ -52,19 +65,19 @@ int klog(const KFTLogger *loger, const LogLevel level, const char *format, const
     switch (level) {
         case ERROR:
             if (mode == FORCE_OFF) break;
-            errf(isatty, logfile, format, fileinfo, line, time, date, args);
+            _print_log(isatty, logfile, format, RED, "ERROR", fileinfo, line, time, date, args);
             break;
         case WARN:
             if (mode != ON) break;
-            warnf(isatty, logfile, format, fileinfo, line, time, date, args);
+            _print_log(isatty, logfile, format, YELLOW, "WARN", fileinfo, line, time, date, args);
             break;
         case LOG:
             if (mode != ON) break;
-            klogf(isatty, logfile, format, fileinfo, line, time, date, args);
+            _print_log(isatty, logfile, format, BLUE, "LOG", fileinfo, line, time, date, args);
             break;
         case SUC:
             if (mode != ON) break;
-            sucf(isatty, logfile, format, fileinfo, line, time, date, args);
+            _print_log(isatty, logfile, format, GREEN, "SUC", fileinfo, line, time, date, args);
             break;
     }
 
@@ -72,48 +85,3 @@ int klog(const KFTLogger *loger, const LogLevel level, const char *format, const
     return 0;
 }
 
-int errf(int isatty, FILE *logfile, const char *format, const char *file, const int line, const char *time, const char *date, va_list args)
-{
-    
-    if (isatty)
-        fprintf(logfile, "%s[ERROR] { %s:%d - %s %s } ", RED, file, line, time, date);
-    else
-        fprintf(logfile, "[ERROR] { %s:%d - %s %s } ", file, line, time, date);
-    vfprintf(logfile, format, args);
-    if (isatty) fprintf(logfile, "%s", RESET);
-    fflush(logfile);
-    return 0;
-}
-
-int klogf(int isatty, FILE *logfile, const char *format, const char *file, const int line, const char *time, const char *date, va_list args)
-{
-    if (isatty)
-        fprintf(logfile, "%s[LOG] { %s:%d - %s %s } ", BLUE, file, line, time, date);
-    else
-        fprintf(logfile, "[LOG] { %s:%d - %s %s } ", file, line, time, date);
-    vfprintf(logfile, format, args);
-    if (isatty) fprintf(logfile, "%s", RESET);
-    return 0;
-}
-
-int warnf(int isatty, FILE *logfile, const char *format, const char *file, const int line, const char *time, const char *date, va_list args)
-{
-    if (isatty)
-        fprintf(logfile, "%s[WARN] { %s:%d - %s %s } ", YELLOW, file, line, time, date);
-    else 
-        fprintf(logfile, "[WARN] { %s:%d - %s %s } ", file, line, time, date);
-    vfprintf(logfile, format, args);
-    if (isatty) fprintf(logfile, "%s", RESET);
-    return 0;
-}
-
-int sucf(int isatty, FILE *logfile, const char *format, const char *file, const int line, const char *time, const char *date, va_list args)
-{
-    if (isatty)
-        fprintf(logfile, "%s[SUCCESS] { %s:%d - %s %s } ", GREEN, file, line, time, date);
-    else
-        fprintf(logfile, "[SUCCESS] { %s:%d - %s %s } ", file, line, time, date);
-    vfprintf(logfile, format, args);
-    if (isatty) fprintf(logfile, "%s", RESET);
-    return 0;
-}
