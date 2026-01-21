@@ -1,5 +1,4 @@
 #define _POSIX_C_SOURCE 200809L
-#define KL_MULTI_LOG
 #include "log.h"
 #include <stdarg.h>
 #include <stdlib.h>
