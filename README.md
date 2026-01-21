@@ -13,7 +13,7 @@ Fully open source. Fully chaotic. Fully yours.
 - [x] Single header + object file implementation
 
 ## 🧩 Advanced Logging
-- [ ] Multi-file logger (unlimited log targets)
+- [x] Multi-file logger (unlimited log targets)
 - [ ] Configurable locking (lock/unlock before writing)
 - [ ] Configurable threading model (main thread or dedicated logging thread)
 - [ ] Optional buffering for efficiency
