@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#define KL_MULTI_LOG
 #include "log.h"
 #include <stdarg.h>
 #include <stdlib.h>
@@ -15,17 +16,18 @@ struct kl_logger {
     int is_heap;
 };
 
+struct kl_log_meta {
+    const char *label;
+    const char *color;
+    int max_allowed_mode;
+};
+
 static kl_logger_t default_logger = {
     .log_file = NULL,
     .mode = ON,
     .is_external_stream = 0
 };
 
-struct kl_log_meta {
-    const char *label;
-    const char *color;
-    int max_allowed_mode;
-};
 
 static struct kl_log_meta levels[] = {
     [SUC] = { "SUCCESS", "\033[32m", ON },
@@ -40,6 +42,7 @@ static struct kl_log_meta levels[] = {
 
 
 static inline int is_external(FILE *f) { return (f != stderr && f != stdout && f != stdin); }
+
 int kl_print_log(int is_a_tty, FILE *logfile, const char *format, const char *color, const char *level, const char *file, const int line,
         const char *time, const char *date, va_list args)
 {
@@ -51,15 +54,18 @@ int kl_print_log(int is_a_tty, FILE *logfile, const char *format, const char *co
     return 0;
 }
 
-void log_logger(kl_logger_t loger)
+//OutDated... Probally? Idk why i coded these but im too afraid to remove now.
+static inline void log_logger(kl_logger_t loger)
 {
     printf("-----LOGGER-----\nLogger mode: %d\nIs A TTY: %d\nIs External: %d\nIs Heap: %d\n---------------\n", loger.mode, loger.is_a_tty, loger.is_external_stream, loger.is_heap);
 }
 
-void log_requies(const char *text, int mode)
+//REALY WTF ARE THESE LMAO
+static inline void log_requies(const char *text, int mode)
 {
     printf("-----REQUEST-----\nMessage: %s\nMode: %d\n---------------\n", text, mode);
 }
+
 /*
  * If NULL logger provided, retuns FORCE_OFF;
  */
@@ -72,8 +78,7 @@ kl_logger_mode_t kl_get_mode(const kl_logger_t *logger)
 /*
  * If NULL logger provided, return NULL;
  */
-FILE *kl_get_file(const kl_logger_t *logger)
-{
+FILE *kl_get_file(const kl_logger_t *logger) {
     if (!logger) return NULL;
     return logger->log_file;
 }
@@ -139,6 +144,7 @@ kl_logger_t kl_logger_init_stack(FILE *file, kl_logger_mode_t mode)
     return lgr;
 }
 
+//Dont forget to free it
 kl_logger_t *kl_logger_init_heap(FILE *file, kl_logger_mode_t mode)
 {
     kl_logger_t *lgr = malloc(sizeof(kl_logger_t));
@@ -148,6 +154,42 @@ kl_logger_t *kl_logger_init_heap(FILE *file, kl_logger_mode_t mode)
     return lgr;
 }
 
+//Heap to stack copy
+kl_logger_t kl_logger_copy_htos(kl_logger_t *log)
+{
+    int fd = fileno(log->log_file);
+    FILE *fl = fdopen(dup(fd), "w");
+    kl_logger_t ret = {
+        .is_heap = 0,
+        .is_external_stream = log->is_external_stream,
+        .log_file = fl,
+        .is_a_tty = log->is_a_tty,
+        .mode = log->mode,
+    };
+    return ret;
+}
+
+//stack to heap coppy
+kl_logger_t *kl_logger_copy_stoh(kl_logger_t log)
+{
+    int fd = fileno(log.log_file);
+    FILE *fl = fdopen(dup(fd), "w");
+    kl_logger_t *ret = kl_logger_init_heap(fl, log.mode);
+    return ret;
+}
+
+//heap to heap coppy
+kl_logger_t *kl_logger_copy_htoh(kl_logger_t *log)
+{
+    int fd = fileno(log->log_file);
+    FILE *fl = fdopen(dup(fd), "w");
+    kl_logger_t *ret = kl_logger_init_heap(fl, log->mode);
+    return ret;
+}
+
+//Does not free the logger. just resets to bare minimum!
+//Still closes to file!
+//file to stderr. 
 int kl_logger_reset(kl_logger_t *lgr)
 {
     if (!lgr) return -1;
@@ -160,6 +202,7 @@ int kl_logger_reset(kl_logger_t *lgr)
     return 0;
 }
 
+//CLoses the file! And free's the logger!
 int kl_logger_destroy(kl_logger_t *lgr)
 {
     if (!lgr) return -1;
@@ -171,8 +214,6 @@ int kl_logger_destroy(kl_logger_t *lgr)
     free(lgr);
     return 0;
 }
-
-
 
 int _kl_log(const kl_logger_t *lgr, const kl_log_level_t level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...)
 {
@@ -195,3 +236,101 @@ int _kl_log(const kl_logger_t *lgr, const kl_log_level_t level, const char *form
     va_end(args);
     return 0;
 }
+
+#ifdef KL_MULTI_LOG //Im not sure if i should put these or not.
+
+/* ---DEFINED IN log.h---
+   typedef struct kl_log_array {
+   kl_logger_t *loggers;
+   size_t logger_count;
+   size_t size;
+   size_t batch;
+   } kl_log_array_t;
+   */
+
+kl_log_array_t *_kl_create_log_array(size_t batch_size) {
+    if (batch_size < 1) return NULL; //fun fact. on v1 this was return 0; wich is same shit;
+    kl_log_array_t *log_array = malloc(sizeof(kl_log_array_t));
+    if (!log_array) return NULL;
+    kl_logger_t **loggers = calloc(batch_size, sizeof(kl_logger_t*));
+    if (!loggers) {
+        free(log_array);
+        return NULL;
+    }
+    log_array->loggers = loggers;
+    log_array->logger_count = 0;
+    log_array->batch = batch_size;
+    log_array->size = batch_size;
+    return log_array;
+}
+
+
+//TODO: Implement stack too!
+void kl_push_to_log_array_heap(kl_log_array_t *array, kl_logger_t *log)
+{
+    if (array->logger_count + 1 > array->size) {
+        size_t new_size = array->size + array->batch;
+        kl_logger_t **tmp = realloc(array->loggers, sizeof(kl_logger_t*) * new_size); 
+        if (!tmp) {
+            errf("Failed to reallocate the logger array!");
+            return;
+        }
+        array->loggers = tmp;
+        array->size = new_size;
+    }
+    array->loggers[array->logger_count++] = log;
+}
+
+kl_logger_t *kl_push_to_log_array_clone_stack(kl_log_array_t *array, kl_logger_t log)
+{
+    kl_logger_t *logg = kl_logger_copy_stoh(log);
+    kl_push_to_log_array_heap(array, logg);
+    return logg;
+}
+
+//Just cleans the array. Not the loggers!
+void kl_clean_log_array(kl_log_array_t *array)
+{
+    free(array->loggers);
+    free(array);
+}
+
+//Destroy loggers too
+void kl_destroy_log_array(kl_log_array_t *array)
+{
+    for (size_t i = 0; i < array->logger_count; ++i) {
+        if (array->loggers[i]->is_heap) free(array->loggers[i]);
+    }
+    free(array->loggers);
+    free(array);
+}
+
+int _kl_log_arr(const kl_log_array_t *array, const kl_log_level_t level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...)
+{
+    va_list raw_args;
+    va_start(raw_args, date);
+
+    //TODO create a helper function taht globalizes logging logic for _kl_log and _kl_Log_arr
+    for (size_t i = 0; i < array->logger_count; ++i) {
+        kl_logger_t *lgr = array->loggers[i];
+        va_list args;
+        va_copy(args, raw_args);
+        FILE *logfile = stderr;
+        kl_logger_mode_t mode = ON;
+        int is_a_tty;
+        if (lgr) {
+            logfile = lgr->log_file ? lgr->log_file : stderr;
+            mode = lgr->mode;
+            is_a_tty = lgr->is_a_tty;
+        } else is_a_tty = isatty(fileno(logfile));
+        if (mode < LVL_DEBUG || mode > FORCE_OFF) return -1;
+        struct kl_log_meta act = levels[level];
+        if ((int) mode > (int) act.max_allowed_mode) return -1;
+        kl_print_log(is_a_tty, logfile, format, act.color, act.label, fileinfo, line, time, date, args);
+
+    }
+    va_end(raw_args);
+    return 0;
+}
+
+#endif
