@@ -1,6 +1,5 @@
 //Hello there. - Obi-Wan
-//kootfe @ github, koofte @ discord.
-//Every data is dd/mm/yyyy or dd/mm/yy in this file comments;
+//kootfe @ github, koofte @ discord. Every data is dd/mm/yyyy or dd/mm/yy in this file comments;
 //entire KftLogger library source code:
 /* GLOBAL TODO:
  * - [ ] Add bit mask for level and mode's 
@@ -12,7 +11,6 @@
  * DONE-TODO: To-Do's that are implemented and fixed.
  */
 #define _POSIX_C_SOURCE 200809L
-#define KL_MULTI_LOG
 #include "log.h"
 #include <stdarg.h>
 #include <stdlib.h>
@@ -62,6 +60,7 @@ static inline kl_logger_mode_t kl_get_maximum_mode(kl_log_level_t level)
 }
 
 //TODO: Nothing...
+/* depreced
 int kl_can_log(kl_logger_t *lgr, const kl_log_level_t level)
 {
     kl_logger_mode_t mode = lgr ? lgr->mode : ON;
@@ -69,6 +68,7 @@ int kl_can_log(kl_logger_t *lgr, const kl_log_level_t level)
     if (mode > max) return 0;
     return 1;
 }
+*/
 
 //TODO: create default switch for UB
 static struct kl_log_meta kl_get_level_act(kl_log_level_t level) {
@@ -126,9 +126,22 @@ static inline void log_logger(kl_logger_t loger)
     printf("-----LOGGER-----\nLogger mode: %d\nIs A TTY: %d\nIs External: %d\nIs Heap: %d\n---------------\n", loger.mode, loger.is_a_tty, loger.is_external_stream, loger.is_heap);
 }
 
-static inline void log_requies(const char *text, int mode)
+static inline void print_binary(int n) 
 {
-    printf("-----REQUEST-----\nMessage: %s\nMode: %d\n---------------\n", text, mode);
+    for (int i = sizeof(n) * 8 - 1; i >= 0; i--) {
+        putchar((n & (1u << i)) ? '1' : '0');
+    }
+    putchar('\n');
+}
+static inline void log_requies(kl_logger_t *lgr, kl_logger_mode_t mode, kl_log_level_t level)
+{
+    printf("Mode1:");
+    print_binary(lgr->mode);
+    printf("Level:");
+    print_binary(level);
+    printf("Can log?: %d", kl_can_log(lgr, level));
+    printf("\n\n");
+
 }
 
 /*
@@ -299,7 +312,6 @@ int _kl_log(const kl_logger_t *lgr, const kl_log_level_t level, const char *form
         mode = lgr->mode;
         is_a_tty = lgr->is_a_tty;
     } else is_a_tty = isatty(fileno(logfile));
-    if (mode < LVL_DEBUG || mode > FORCE_OFF) return -1;
     struct kl_log_meta act = kl_get_level_act(level);
     kl_print_log(is_a_tty, logfile, format, act.color, act.label, fileinfo, line, time, date, args);
 

@@ -3,29 +3,41 @@
 #define LOG_H
 #include <stdio.h>
 #include <stdarg.h>
-
-//Single logger operations:
-typedef enum kl_logger_mode { LVL_DEBUG = 0,
-    ON = 1,
-    OFF = 2,
-    FORCE_OFF = 3,
-} kl_logger_mode_t;
-
-typedef enum kl_log_level {
-    ERROR,
-    LOG,
-    WARN,
-    SUC,
-    INFO,
-    TRACE,
-    FATAL,
-    DEBUG,
-} kl_log_level_t;
+#include <stdint.h>
 
 typedef struct kl_logger kl_logger_t;
+//Single logger operations:
+
+typedef enum kl_log_level {
+    ERROR = 1 << 0,
+    LOG = 1 << 1,
+    WARN = 1 << 2,
+    SUC = 1 << 3,
+    INFO = 1 << 4,
+    TRACE = 1 << 5,
+    FATAL = 1 << 6,
+    DEBUG = 1 << 7
+} kl_log_level_t;
+
+typedef enum kl_logger_mode {
+    LVL_DEBUG = (ERROR | LOG | WARN | SUC | INFO | TRACE | FATAL | DEBUG),
+    ON = (ERROR | LOG | WARN | SUC | INFO | FATAL),
+    OFF = (ERROR | FATAL),
+    FORCE_OFF = (FATAL),
+} kl_logger_mode_t;
+
+kl_logger_mode_t kl_get_mode(const kl_logger_t *logger);
+
+static inline int kl_can_log(kl_logger_t *log, kl_log_level_t level) 
+{
+    if (kl_get_mode(log) & level) return 1;
+    return 0;
+}
+
+
 
 int _kl_log(const kl_logger_t *loger, const kl_log_level_t level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...);
-int kl_can_log(kl_logger_t *lgr, const kl_log_level_t level);
+//int kl_can_log(kl_logger_t *lgr, const kl_log_level_t level); <- depreced
 
 #define protect(statement) do { statement } while (0);
 
@@ -127,7 +139,6 @@ int kl_can_log(kl_logger_t *lgr, const kl_log_level_t level);
             )
 
 int kl_set_mode(kl_logger_t *lgr, kl_logger_mode_t mode);
-kl_logger_mode_t kl_get_mode(const kl_logger_t *logger);
 int kl_set_file(kl_logger_t *lgr, FILE *file);
 FILE *kl_get_file(const kl_logger_t *logger);
 

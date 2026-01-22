@@ -1,0 +1,87 @@
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+...
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+[LOG] { test.c:9, - 23:19:57 Jan 22 2026 } test
+./app  0.01s user 0.02s system 96% cpu 0.022 total
+❯ cat test.c
+#include "log.h"
+#include <stdio.h>
+
+int main()
+{
+    kl_logger_t *lgr = kl_logger_init_heap(stdout, ON);
+    kl_set_def_logger(lgr);
+    for (int i = 0; i < 10000; ++i) {
+        klogf("test\n");
+    }
+    return 0;
+}
+
+----
+
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+...
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+[LOG] { test.c:7, - 23:20:48 Jan 22 2026 } test
+./app  0.01s user 0.02s system 95% cpu 0.033 total
+❯ cat test.c
+#include "log.h"
+#include <stdio.h>
+
+int main()
+{
+    for (int i = 0; i < 10000; ++i) {
+        klogf("test\n");
+    }
+    return 0;
+}
+❯ why the fuck having no setter makes more time lol. also since we do no_tty i have no color
+---
+❯ time ./app
+./app  0.00s user 0.00s system 64% cpu 0.002 total
+❯ cat test.c
+#include "log.h"
+#include <stdio.h>
+
+int main()
+{
+    kl_logger_t *lgr = kl_logger_init_heap(stdout, OFF);
+    kl_set_def_logger(lgr);
+    for (int i = 0; i < 10000; ++i) {
+        klogf("test\n");
+    }
+    return 0;
+}
+
