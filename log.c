@@ -2,7 +2,17 @@
 //kootfe @ github, koofte @ discord.
 //Every data is dd/mm/yyyy or dd/mm/yy in this file comments;
 //entire KftLogger library source code:
+/* GLOBAL TODO:
+ * - [ ] Add bit mask for level and mode's 
+ * - [ ] Optimize.
+ * - [ ] Add thread safety.
+ *
+ * NOTES:
+ * TODO: thing to do...
+ * DONE-TODO: To-Do's that are implemented and fixed.
+ */
 #define _POSIX_C_SOURCE 200809L
+#define KL_MULTI_LOG
 #include "log.h"
 #include <stdarg.h>
 #include <stdlib.h>
@@ -20,7 +30,6 @@ struct kl_logger {
 struct kl_log_meta {
     const char *label;
     const char *color;
-    int max_allowed_mode;
 };
 
 static kl_logger_t default_logger = {
@@ -29,23 +38,72 @@ static kl_logger_t default_logger = {
     .is_external_stream = 0
 };
 
-//Needed for level comprasion. Sets the minimum needed levels per modes;
-//TODO: Create min_needed_level() function for compare logic;
-static const struct kl_log_meta levels[] = {
-    [SUC] = { "SUCCESS", "\033[32m", ON },
-    [WARN] = { "WARN", "\033[33m", ON },
-    [ERROR] = { "ERROR", "\033[31m", OFF },
-    [LOG] = { "LOG", "\033[34m", ON },
-    [DEBUG] = { "DEBUG", "\033[36m", LVL_DEBUG },
-    [TRACE] = { "TRACE", "\033[35m", LVL_DEBUG },
-    [FATAL] = { "FATAL", "\033[31m", FORCE_OFF },
-    [INFO] = { "INFO", "\033[34m", ON }
-};
+///DONE-TODO: by kootfe @ github, 22-01-2026, Create min_needed_level() function for compare logic;
+static inline struct kl_log_meta kl_log_create_meta(char* label, char* color)
+{
+    struct kl_log_meta ret = {
+        .label = label,
+        .color = color,
+    };
+    return ret;
+}
+static inline kl_logger_mode_t kl_get_maximum_mode(kl_log_level_t level)
+{
+    switch (level) {
+        case SUC: return ON; break;
+        case WARN: return ON; break;
+        case ERROR: return OFF; break;
+        case LOG: return ON; break;
+        case DEBUG: return LVL_DEBUG; break;
+        case TRACE: return LVL_DEBUG; break;
+        case FATAL: return FORCE_OFF; break;
+        case INFO: return ON; break;
+    }
+}
+
+//TODO: Nothing...
+int kl_can_log(kl_logger_t *lgr, const kl_log_level_t level)
+{
+    kl_logger_mode_t mode = lgr ? lgr->mode : ON;
+    kl_logger_mode_t max = kl_get_maximum_mode(level);
+    if (mode > max) return 0;
+    return 1;
+}
+
+//TODO: create default switch for UB
+static struct kl_log_meta kl_get_level_act(kl_log_level_t level) {
+    kl_logger_mode_t lvl = kl_get_maximum_mode(level);
+    switch (level) {
+        case SUC:
+            return kl_log_create_meta("SUCCESS", "\033[32m");
+            break;
+        case WARN:
+            return kl_log_create_meta("WARN", "\033[33m");
+            break;
+        case ERROR:
+            return kl_log_create_meta("ERROR", "\033[31m");
+            break;
+        case LOG:
+            return kl_log_create_meta("LOG", "\033[34m");
+            break;
+        case DEBUG:
+            return kl_log_create_meta("DEBUG", "\033[36m");
+            break;
+        case TRACE:
+            return kl_log_create_meta("TRACE", "\033[35m");
+            break;
+        case FATAL:
+            return kl_log_create_meta("FATAL", "\033[31m");
+            break;
+        case INFO:
+            return kl_log_create_meta("INFO", "\033[34m");
+            break;
+    }
+}
 
 static const char *RESET = "\033[0m";
 
-//Self explaining
-//Just kidding. Decides if the file part of standarts or external stream;
+//Decides if the file part of standarts or external stream;
 static inline int is_external(FILE *f) { return (f != stderr && f != stdout && f != stdin); }
 
 int kl_print_log(int is_a_tty, FILE *logfile, const char *format, const char *color, const char *level, const char *file, const int line,
@@ -60,9 +118,7 @@ int kl_print_log(int is_a_tty, FILE *logfile, const char *format, const char *co
 }
 
 /* 
- *Not used... Probally? Idk why i coded these but im too afraid to remove now.
- *Solved it, these are helper functions i use when i log the logger.
- *They are static so no need to remove.
+ *these are helper functions i use when i log the logger.
  * TODO: Clean these functions and add intro logger's itself as meta logger;
  */
 static inline void log_logger(kl_logger_t loger)
@@ -228,8 +284,10 @@ int kl_logger_destroy(kl_logger_t *lgr)
     return 0;
 }
 
+
 int _kl_log(const kl_logger_t *lgr, const kl_log_level_t level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...)
 {
+    if (!kl_can_log((kl_logger_t*)lgr, level)) return 0;
     va_list args;
     va_start(args, date);
 
@@ -242,17 +300,14 @@ int _kl_log(const kl_logger_t *lgr, const kl_log_level_t level, const char *form
         is_a_tty = lgr->is_a_tty;
     } else is_a_tty = isatty(fileno(logfile));
     if (mode < LVL_DEBUG || mode > FORCE_OFF) return -1;
-    struct kl_log_meta act = levels[level];
-    if ((int) mode > (int) act.max_allowed_mode) return -1;
+    struct kl_log_meta act = kl_get_level_act(level);
     kl_print_log(is_a_tty, logfile, format, act.color, act.label, fileinfo, line, time, date, args);
 
     va_end(args);
     return 0;
 }
 
-#ifdef KL_MULTI_LOG //Im not sure if i should put these or not.
-                    // Okay it gives error if not here lol.
-                    // TODO: Learn why these defination guards are needed.
+#ifdef KL_MULTI_LOG
 
 /* ---DEFINED IN log.h---
    typedef struct kl_log_array {
@@ -261,7 +316,7 @@ int _kl_log(const kl_logger_t *lgr, const kl_log_level_t level, const char *form
    size_t size;
    size_t batch;
    } kl_log_array_t;
-*/
+   */
 
 kl_log_array_t *_kl_create_log_array(size_t batch_size) {
     //If batch size is less then 1 we cant resize or add. (thats why we use size_t but again... 0)
@@ -329,6 +384,7 @@ int _kl_log_arr(const kl_log_array_t *array, const kl_log_level_t level, const c
     //TODO: Create a helper function taht globalizes logging logic for _kl_log and _kl_Log_arr
     for (size_t i = 0; i < array->logger_count; ++i) {
         kl_logger_t *lgr = array->loggers[i];
+        if (!kl_can_log(lgr, level)) continue;
         va_list args;
         va_copy(args, raw_args);
         FILE *logfile = stderr;
@@ -340,8 +396,7 @@ int _kl_log_arr(const kl_log_array_t *array, const kl_log_level_t level, const c
             is_a_tty = lgr->is_a_tty;
         } else is_a_tty = isatty(fileno(logfile));
         if (mode < LVL_DEBUG || mode > FORCE_OFF) return -1;
-        struct kl_log_meta act = levels[level];
-        if ((int) mode > (int) act.max_allowed_mode) return -1;
+        struct kl_log_meta act = kl_get_level_act(level);
         kl_print_log(is_a_tty, logfile, format, act.color, act.label, fileinfo, line, time, date, args);
 
     }

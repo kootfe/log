@@ -1,0 +1,2 @@
+- [ ] Add bit mask for log levels, modes;
+- [ ] Add better macros;

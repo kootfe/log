@@ -25,30 +25,106 @@ typedef enum kl_log_level {
 typedef struct kl_logger kl_logger_t;
 
 int _kl_log(const kl_logger_t *loger, const kl_log_level_t level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...);
+int kl_can_log(kl_logger_t *lgr, const kl_log_level_t level);
 
-#define klogf(format, ...) _kl_log(kl_get_def_logger(), LOG, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
-#define klogf_sp(loger, format, ...) _kl_log(loger, LOG, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
+#define protect(statement) do { statement } while (0);
 
-#define errf(format, ...) _kl_log(kl_get_def_logger(), ERROR, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
-#define errf_sp(loger, format, ...) _kl_log(loger, ERROR, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
+//TODO: add kl_logger_t *def = kl_get_def_logger() for each non _sp macro for performance
+#define klogf(format, ...) \
+    protect( \
+            if (kl_can_log(kl_get_def_logger(), LOG)) \
+            _kl_log(kl_get_def_logger(), LOG, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
 
-#define warnf(format, ...) _kl_log(kl_get_def_logger(), WARN, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
-#define warnf_sp(loger, format, ...) _kl_log(loger, WARN, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
+#define klogf_sp(logger, format, ...) \
+    protect( \
+            if (kl_can_log(logger, LOG)) \
+            _kl_log(logger, LOG, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
 
-#define sucf(format, ...) _kl_log(kl_get_def_logger(), SUC, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
-#define sucf_sp(loger, format, ...) _kl_log(loger, SUC, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
+#define errf(format, ...) \
+    protect( \
+            if (kl_can_log(kl_get_def_logger(), ERROR)) \
+            _kl_log(kl_get_def_logger(), ERROR, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
 
-#define infof(format, ...) _kl_log(kl_get_def_logger(), INFO, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
-#define infof_sp(loger, format, ...) _kl_log(loger, INFO, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
+#define errf_sp(logger, format, ...) \
+    protect( \
+            if (kl_can_log(logger, ERROR)) \
+            _kl_log(logger, ERROR, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
 
-#define fatalf(format, ...) _kl_log(kl_get_def_logger(), FATAL, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
-#define fatalf_sp(loger, format, ...) _kl_log(loger, FATAL, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
+#define warnf(format, ...) \
+    protect( \
+            if (kl_can_log(kl_get_def_logger(), WARN)) \
+            _kl_log(kl_get_def_logger(), WARN, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
 
-#define traf(format, ...) _kl_log(kl_get_def_logger(), TRACE, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
-#define traf_sp(loger, format, ...) _kl_log(loger, TRACE, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
+#define warnf_sp(logger, format, ...) \
+    protect( \
+            if (kl_can_log(logger, WARN)) \
+            _kl_log(logger, WARN, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
 
-#define debgf(format, ...) _kl_log(kl_get_def_logger(), DEBUG, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
-#define debgf_sp(loger, format, ...) _kl_log(loger, DEBUG, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__)
+#define sucf(format, ...) \
+    protect( \
+            if (kl_can_log(kl_get_def_logger(), SUC)) \
+            _kl_log(kl_get_def_logger(), SUC, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
+
+#define sucf_sp(logger, format, ...) \
+    protect( \
+            if (kl_can_log(logger, SUC)) \
+            _kl_log(logger, SUC, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
+
+#define infof(format, ...) \
+    protect( \
+            if (kl_can_log(kl_get_def_logger(), INFO)) \
+            _kl_log(kl_get_def_logger(), INFO, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
+
+#define infof_sp(logger, format, ...) \
+    protect( \
+            if (kl_can_log(logger, INFO)) \
+            _kl_log(logger, INFO, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
+
+#define fatalf(format, ...) \
+    protect( \
+            if (kl_can_log(kl_get_def_logger(), FATAL)) \
+            _kl_log(kl_get_def_logger(), FATAL, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
+
+#define fatalf_sp(logger, format, ...) \
+    protect( \
+            if (kl_can_log(logger, FATAL)) \
+            _kl_log(logger, FATAL, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
+
+#define traf(format, ...) \
+    protect( \
+            if (kl_can_log(kl_get_def_logger(), TRACE)) \
+            _kl_log(kl_get_def_logger(), TRACE, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
+
+#define traf_sp(logger, format, ...) \
+    protect( \
+            if (kl_can_log(logger, TRACE)) \
+            _kl_log(logger, TRACE, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
+
+#define debgf(format, ...) \
+    protect( \
+            if (kl_can_log(kl_get_def_logger(), DEBUG)) \
+            _kl_log(kl_get_def_logger(), DEBUG, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
+
+#define debgf_sp(logger, format, ...) \
+    protect( \
+            if (kl_can_log(logger, DEBUG)) \
+            _kl_log(logger, DEBUG, format, __FILE__, __LINE__, __TIME__, __DATE__, ##__VA_ARGS__); \
+            )
 
 int kl_set_mode(kl_logger_t *lgr, kl_logger_mode_t mode);
 kl_logger_mode_t kl_get_mode(const kl_logger_t *logger);
@@ -85,7 +161,7 @@ kl_log_array_t *_kl_create_log_array(size_t batch_size);
 void kl_push_to_log_array_heap(kl_log_array_t *array, kl_logger_t *log);
 kl_logger_t *kl_push_to_log_array_clone_stack(kl_log_array_t *array, kl_logger_t log);
 void kl_clean_log_array(kl_log_array_t *array);
-int _kl_log_arr(const kl_log_array_t *array, const kl_log_level_t level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...)
+int _kl_log_arr(const kl_log_array_t *array, const kl_log_level_t level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...);
 #endif
 #endif
 //Why you are reading me?
