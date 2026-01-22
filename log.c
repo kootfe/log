@@ -1,11 +1,13 @@
+//Hello there. - Obi-Wan
+//kootfe @ github, koofte @ discord.
+//Every data is dd/mm/yyyy or dd/mm/yy in this file comments;
+//entire KftLogger library source code:
 #define _POSIX_C_SOURCE 200809L
 #include "log.h"
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-
-static const char *RESET = "\033[0m";
 
 struct kl_logger {
     FILE *log_file;
@@ -27,8 +29,9 @@ static kl_logger_t default_logger = {
     .is_external_stream = 0
 };
 
-
-static struct kl_log_meta levels[] = {
+//Needed for level comprasion. Sets the minimum needed levels per modes;
+//TODO: Create min_needed_level() function for compare logic;
+static const struct kl_log_meta levels[] = {
     [SUC] = { "SUCCESS", "\033[32m", ON },
     [WARN] = { "WARN", "\033[33m", ON },
     [ERROR] = { "ERROR", "\033[31m", OFF },
@@ -39,7 +42,10 @@ static struct kl_log_meta levels[] = {
     [INFO] = { "INFO", "\033[34m", ON }
 };
 
+static const char *RESET = "\033[0m";
 
+//Self explaining
+//Just kidding. Decides if the file part of standarts or external stream;
 static inline int is_external(FILE *f) { return (f != stderr && f != stdout && f != stdin); }
 
 int kl_print_log(int is_a_tty, FILE *logfile, const char *format, const char *color, const char *level, const char *file, const int line,
@@ -53,13 +59,17 @@ int kl_print_log(int is_a_tty, FILE *logfile, const char *format, const char *co
     return 0;
 }
 
-//OutDated... Probally? Idk why i coded these but im too afraid to remove now.
+/* 
+ *Not used... Probally? Idk why i coded these but im too afraid to remove now.
+ *Solved it, these are helper functions i use when i log the logger.
+ *They are static so no need to remove.
+ * TODO: Clean these functions and add intro logger's itself as meta logger;
+ */
 static inline void log_logger(kl_logger_t loger)
 {
     printf("-----LOGGER-----\nLogger mode: %d\nIs A TTY: %d\nIs External: %d\nIs Heap: %d\n---------------\n", loger.mode, loger.is_a_tty, loger.is_external_stream, loger.is_heap);
 }
 
-//REALY WTF ARE THESE LMAO
 static inline void log_requies(const char *text, int mode)
 {
     printf("-----REQUEST-----\nMessage: %s\nMode: %d\n---------------\n", text, mode);
@@ -82,6 +92,9 @@ FILE *kl_get_file(const kl_logger_t *logger) {
     return logger->log_file;
 }
 
+/*
+ * POINTER to default logger.
+ */
 kl_logger_t *kl_get_def_logger(void)
 {
     return &default_logger;
@@ -103,6 +116,7 @@ int kl_set_file(kl_logger_t *lgr, FILE *file)
     return 0;
 }
 
+//Technichally can be done manualy, just safer helper;
 int kl_set_mode(kl_logger_t *lgr, kl_logger_mode_t mode)
 {
     if (!lgr) return -1;
@@ -168,7 +182,7 @@ kl_logger_t kl_logger_copy_htos(kl_logger_t *log)
     return ret;
 }
 
-//stack to heap coppy
+//stack to heap copy
 kl_logger_t *kl_logger_copy_stoh(kl_logger_t log)
 {
     int fd = fileno(log.log_file);
@@ -177,7 +191,7 @@ kl_logger_t *kl_logger_copy_stoh(kl_logger_t log)
     return ret;
 }
 
-//heap to heap coppy
+//heap to heap copy
 kl_logger_t *kl_logger_copy_htoh(kl_logger_t *log)
 {
     int fd = fileno(log->log_file);
@@ -187,7 +201,7 @@ kl_logger_t *kl_logger_copy_htoh(kl_logger_t *log)
 }
 
 //Does not free the logger. just resets to bare minimum!
-//Still closes to file!
+//Still closes the file!
 //file to stderr. 
 int kl_logger_reset(kl_logger_t *lgr)
 {
@@ -237,6 +251,8 @@ int _kl_log(const kl_logger_t *lgr, const kl_log_level_t level, const char *form
 }
 
 #ifdef KL_MULTI_LOG //Im not sure if i should put these or not.
+                    // Okay it gives error if not here lol.
+                    // TODO: Learn why these defination guards are needed.
 
 /* ---DEFINED IN log.h---
    typedef struct kl_log_array {
@@ -245,10 +261,11 @@ int _kl_log(const kl_logger_t *lgr, const kl_log_level_t level, const char *form
    size_t size;
    size_t batch;
    } kl_log_array_t;
-   */
+*/
 
 kl_log_array_t *_kl_create_log_array(size_t batch_size) {
-    if (batch_size < 1) return NULL; //fun fact. on v1 this was return 0; wich is same shit;
+    //If batch size is less then 1 we cant resize or add. (thats why we use size_t but again... 0)
+    if (batch_size < 1) return NULL; //fun fact. on v1 this was return 0; which is same shit;
     kl_log_array_t *log_array = malloc(sizeof(kl_log_array_t));
     if (!log_array) return NULL;
     kl_logger_t **loggers = calloc(batch_size, sizeof(kl_logger_t*));
@@ -264,7 +281,7 @@ kl_log_array_t *_kl_create_log_array(size_t batch_size) {
 }
 
 
-//TODO: Implement stack too!
+//DONE-TODO: by koofte @ github, 21/01/2026, Implement stack too!
 void kl_push_to_log_array_heap(kl_log_array_t *array, kl_logger_t *log)
 {
     if (array->logger_count + 1 > array->size) {
@@ -309,7 +326,7 @@ int _kl_log_arr(const kl_log_array_t *array, const kl_log_level_t level, const c
     va_list raw_args;
     va_start(raw_args, date);
 
-    //TODO create a helper function taht globalizes logging logic for _kl_log and _kl_Log_arr
+    //TODO: Create a helper function taht globalizes logging logic for _kl_log and _kl_Log_arr
     for (size_t i = 0; i < array->logger_count; ++i) {
         kl_logger_t *lgr = array->loggers[i];
         va_list args;
@@ -333,3 +350,4 @@ int _kl_log_arr(const kl_log_array_t *array, const kl_log_level_t level, const c
 }
 
 #endif
+//Bye bye!

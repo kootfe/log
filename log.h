@@ -1,11 +1,11 @@
+//Every function comment is in log.c leave this file alone. This is just Header!
 #ifndef LOG_H
 #define LOG_H
 #include <stdio.h>
 #include <stdarg.h>
 
-//Single Logger Operations
-typedef enum kl_logger_mode {
-    LVL_DEBUG = 0,
+//Single logger operations:
+typedef enum kl_logger_mode { LVL_DEBUG = 0,
     ON = 1,
     OFF = 2,
     FORCE_OFF = 3,
@@ -67,9 +67,13 @@ kl_logger_t *kl_logger_copy_htoh(kl_logger_t *log);
 int kl_set_def_logger(const kl_logger_t *lgr);
 kl_logger_t *kl_get_def_logger(void);
 
-//#define KL_MULTI_LOG // FOr dev side syntax higlighting. remove on commit
+//Multti logger perations:
+//
+//#define KL_MULTI_LOG // For dev side syntax higlighting. remove on commit
 #ifdef KL_MULTI_LOG
+
 //TODO: You need to make helper macros like errf and default array for fast usage.
+
 typedef struct kl_log_array {
     kl_logger_t **loggers;
     size_t logger_count;
@@ -83,5 +87,5 @@ kl_logger_t *kl_push_to_log_array_clone_stack(kl_log_array_t *array, kl_logger_t
 void kl_clean_log_array(kl_log_array_t *array);
 int _kl_log_arr(const kl_log_array_t *array, const kl_log_level_t level, const char *format, const char *fileinfo, const int line, const char *time, const char *date, ...)
 #endif
-
 #endif
+//Why you are reading me?
